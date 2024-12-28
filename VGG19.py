@@ -78,86 +78,86 @@ class VGG19(nn.Module):
 
         x = self.conv1_1(temp)
         x = self.relu1_1(x)
-        x = normalize_activations(x) 
+        # x = normalize_activations(x) 
         self.features_maps["conv1_1"] = x
         x = self.conv1_2(x)
         x = self.relu1_2(x)
-        x = normalize_activations(x) 
+        # x = normalize_activations(x) 
         self.features_maps["conv1_2"] = x
         x = self.pool1(x)
         self.features_maps["pool1"] = x
         
         x = self.conv2_1(x)
         x = self.relu2_1(x)
-        x = normalize_activations(x) 
+        # x = normalize_activations(x) 
         self.features_maps["conv2_1"] = x
         x = self.conv2_2(x)
         x = self.relu2_2(x)
-        x = normalize_activations(x) 
+        # x = normalize_activations(x) 
         self.features_maps["conv2_2"] = x
         x = self.pool2(x)
         self.features_maps["pool2"] = x
         
         x = self.conv3_1(x)
         x = self.relu3_1(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv3_1"] = x
         x = self.conv3_2(x)
         x = self.relu3_2(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv3_2"] = x
         x = self.conv3_3(x)
         x = self.relu3_3(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv3_3"] = x
         x = self.conv3_4(x)
         x = self.relu3_4(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv3_4"] = x
         x = self.pool3(x)
         self.features_maps["pool3"] = x
         
         x = self.conv4_1(x)
         x = self.relu4_1(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv4_1"] = x
         x = self.conv4_2(x)
         x = self.relu4_2(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv4_2"] = x
         x = self.conv4_3(x)
         x = self.relu4_3(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv4_3"] = x
         x = self.conv4_4(x)
         x = self.relu4_4(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv4_4"] = x
         x = self.pool4(x)
         self.features_maps["pool4"] = x
         
         x = self.conv5_1(x)
         x = self.relu5_1(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv5_1"] = x
         x = self.conv5_2(x)
         x = self.relu5_2(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv5_2"] = x
         x = self.conv5_3(x)
         x = self.relu5_3(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv5_3"] = x
         x = self.conv5_4(x)
         x = self.relu5_4(x)
-        x = normalize_activations(x)
+        # x = normalize_activations(x)
         self.features_maps["conv5_4"] = x
         x = self.pool5(x)
         self.features_maps["pool5"] = x
         
         return x
     
-def get_vgg19():
+def get_vgg19(pooling='avg'):
 
     layer_map = {
         'conv1_1.weight': 'features.0.weight',
@@ -201,18 +201,52 @@ def get_vgg19():
         adapted_weights[key] = pretrained_weights[layer_map[key]]
     # print(adapted_weights.keys())
     model.load_state_dict(adapted_weights)
+
+    if(pooling == 'max'):
+        model.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        model.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        model.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        model.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
+        model.pool5 = nn.MaxPool2d(kernel_size=2, stride=2)
         
     return model
 
-    
+def rescale_weights(model,img_list,device=device):
+    '''
+    Rescaling the weights in the network such that the mean activation of each filter over images and positions is equal to one. 
+    '''
+    model = model.to(device)
+    model.eval()
+    with torch.no_grad():
+        layers=[]
+        for name, module in model.named_modules():
+            layers.append(module)
+        layers.pop(0)
+        for i,layer in enumerate(layers):
+            if isinstance(layer, nn.Conv2d):
+                total_activation = 0.0
+                total_num = 0
+                for img in img_list:
+                    img = img.to(device)
+                    for j in range(i+2):
+                        img = layers[j](img)
+                    total_activation += img.sum().item()
+                    total_num += img.numel()
+                    
+                mean_activation = total_activation / total_num
+                layer.weight.data /= mean_activation  
+                layer.bias.data /= mean_activation
+    return model
+
 # if __name__ == '__main__':
 
-#     model = get_vgg19().to(device)
+#     model = get_vgg19('avg').to(device)
 #     print(model)
 #     # 随机生成一张图片
 #     img = torch.rand(1,3,224,224).to(device)
+#     model=rescale_weights(model,[img])
 #     model(img)
-
 #     feature_maps = model.features_maps
-
 #     print(f'feature_maps in different layer: {feature_maps.keys()}')
+#     for value in feature_maps.values():
+#         print(value.mean())
