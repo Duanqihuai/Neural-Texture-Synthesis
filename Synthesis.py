@@ -15,7 +15,7 @@ std=torch.tensor([0.229,0.224,0.225])
 transform=transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize((224,224)),
-    transforms.Normalize(mean,std)
+    # transforms.Normalize(mean,std)
 ])
 
 def load_image(image_path):
@@ -30,10 +30,10 @@ def save_image(image,path):
     path='output/'+path
     image=image.squeeze(0)
     image=image.permute(1,2,0)
-    m=mean.to(device)
-    s=std.to(device)
-    image=image*s+m
-    image=image.clamp(0,1)
+    # m=mean.to(device)
+    # s=std.to(device)
+    # image=image*s+m
+    # image=image.clamp(0,1)
     image=image.detach().cpu()
     image=image.numpy()
     image=(image*255).astype(np.uint8)
@@ -54,7 +54,7 @@ def texture_synthesis(model,target_img,args):
         optimizer.zero_grad()
         model(syn_img)
         syn_features=model.features_maps
-        loss=loss_fn(syn_features,target_features)
+        loss=loss_fn(syn_features,target_features,args.layer_list)
         # print(f'Loss={loss.item()}',end=',')
         loss.backward(retain_graph=True)
         return loss
@@ -62,6 +62,7 @@ def texture_synthesis(model,target_img,args):
     optimizer=torch.optim.LBFGS([syn_img],lr=args.lr)
     for i in tqdm(range(args.epochs)):
         optimizer.step(closure)
+        syn_img.data.clamp_(0,1)
         # print(f'Epoch={i+1}')
         if i%100==0:
             save_image(syn_img,f'{i+1}_{args.output_path}')
@@ -81,6 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--image_path', type=str, default='images/pebbles.jpg',help='Path to the source image')
     parser.add_argument('--output_path', type=str, default='output.jpg',help='Path to save the synthesized image')
     parser.add_argument('--epochs', type=int, default=100,help='Number of epochs')
+    parser.add_argument('--layer_list', type=list, default=['conv1_1','conv2_1','conv3_1','conv4_1'],help='List of layers to use')
     args = parser.parse_args()
 
     model=get_vgg19(args.pooling)
