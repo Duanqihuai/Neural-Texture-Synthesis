@@ -211,7 +211,7 @@ def get_vgg19(pooling='avg'):
         
     return model
 
-def rescale_weights(model,img_list,device=device):
+def rescale_weights(model,img_list:list,device=device):
     '''
     Rescaling the weights in the network such that the mean activation of each filter over images and positions is equal to one. 
     '''
