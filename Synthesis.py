@@ -82,8 +82,9 @@ if __name__ == '__main__':
     parser.add_argument('--image_path', type=str, default='images/pebbles.jpg',help='Path to the source image')
     parser.add_argument('--output_path', type=str, default='output.jpg',help='Path to save the synthesized image')
     parser.add_argument('--epochs', type=int, default=100,help='Number of epochs')
-    parser.add_argument('--layer_list', type=list, default=['conv1_1','conv2_1','conv3_1','conv4_1'],help='List of layers to use')
+    parser.add_argument('--layer_list',nargs='+', default=['conv1_1','conv2_1','conv3_1','conv4_1'],help='List of layers to use')
     args = parser.parse_args()
+    print(args.layer_list)
 
     model=get_vgg19(args.pooling)
     target_img=load_image(args.image_path)
