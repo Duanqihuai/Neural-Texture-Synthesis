@@ -44,14 +44,14 @@ python Synthesis.py --method=gram --image_path=./images/pebbles.jpg --output_fol
 #### Neural Texture Synthesis with Guided Correspondence
 
 ```bash
-python ./Synthesis.py --image_path=./images/pebbles.jpg --output_folder=./outputs --output_path=output_pebbles_cnnmrf.jpg --epochs=1000 --method=cnnmrf 
+python ./Synthesis.py --image_path=./images/pebbles.jpg --output_folder=./outputs --output_filename=output_pebbles_cnnmrf.jpg --epochs=1000 --method=cnnmrf 
 ```
 ### Orientation Control
 
 ![](images/orientation.jpg)
 
 ```bash
-python ./Synthesis.py --image_path=./orientation/source/78.jpg --output_folder=./outputs --output_path=78_1.jpg --epochs=1000 --method=cnnmrf --lambda_orientation=5 --target_orientation_file=orientation/target/target_orient-1.npy
+python ./Synthesis.py --image_path=./orientation/source/78.jpg --output_folder=./outputs --output_filename=78_1.jpg --epochs=1000 --method=cnnmrf --lambda_orientation=5 --target_orientation_file=orientation/target/target_orient-1.npy
 ```
 
 ### Style Transfer
@@ -59,5 +59,5 @@ python ./Synthesis.py --image_path=./orientation/source/78.jpg --output_folder=.
 ![](images/style.jpg)
 
 ```bash
-  python ./Synthesis.py --image_path=./images/dancing.jpg --output_folder=./outputs --output_path=output_dancing_picasso.jpg --epochs=1000 --method=cnnmrf --style_image=./images/picasso.jpg --lambda_colorstyle=5
+  python ./Synthesis.py --image_path=./images/dancing.jpg --output_folder=./outputs --output_filename=output_dancing_picasso.jpg --epochs=1000 --method=cnnmrf --style_image=./images/picasso.jpg --lambda_colorstyle=5
 ```
