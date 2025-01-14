@@ -25,7 +25,7 @@ Texture plays an important role in computer vision, graphics, and image encoding
 | `--output_folder`         | `./outputs`                       | `str`    | The folder where the output files will be saved.                            |
 ## Usage
 
-To run the texture synthesis tool, use the following command:
+To run the texture synthesis tool, take the following command as an example:
 
 ```bash
-python Synthesis.py --image_path path/to/your/image.jpg --style_image path/to/your/style.jpg
+python Synthesis.py --image_path=path/to/your/image.jpg --output_folder=path/to/your/folder --output_filename=yourname.jpg --epochs=1000 --layer_list conv1_1 conv2_1 conv3_1 conv4_1
