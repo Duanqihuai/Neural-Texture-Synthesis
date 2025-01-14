@@ -30,5 +30,27 @@ Texture plays an important role in computer vision, graphics, and image encoding
 
 To run the texture synthesis tool, take the following command as an example:
 
+### Texture Synthesis
+
+We use pebbles.jpg as the ground truth. Yon can run the following code to see the example result of the texture synthesis.
+
+！[](images/compare.png)
+
+#### Gram Metrix
+
 ```bash
-python Synthesis.py --image_path=path/to/your/image.jpg --output_folder=path/to/your/folder --output_filename=yourname.jpg --epochs=1000 --layer_list conv1_1 conv2_1 conv3_1 conv4_1
+python Synthesis.py --method=gram --image_path=./images/pebbles.jpg --output_folder=./outputs --output_filename=output_pebbles_gram.jpg --epochs=1000 --layer_list conv1_1 conv2_1 conv3_1 conv4_1
+```
+#### Neural Texture Synthesis with Guided Correspondence
+
+```bash
+python ./Synthesis.py --image_path=./images/pebbles.jpg --output_folder=./outputs --output_path=output_pebbles_cnnmrf.jpg --epochs=1000 --method=cnnmrf 
+```
+### Orientation Control
+
+![](images/style.jpg)
+
+```bash
+python ./Synthesis.py --image_path=./orientation/source/78.jpg --output_folder=./outputs --output_path=78_1.jpg --epochs=1000 --method=cnnmrf --lambda_orientation=5 --target_orientation_file=orientation/target/target_orient-1.npy
+
+```
