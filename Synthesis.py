@@ -1,4 +1,5 @@
 import torch
+import os
 import cv2
 import numpy as np
 import argparse
@@ -10,6 +11,7 @@ from VGG19 import get_vgg19, rescale_weights
 from Optimizier import loss_fn
 from CNNMRF import Loss_forward
 from orientation import DirectionFeatureExtractor
+from style import ColorStyleTransfer
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -29,8 +31,10 @@ def load_image(image_path):
     # print(image.shape)
     return image
 
-def save_image(image,path):
-    path='output_mrf/fruit/'+path
+def save_image(image, path, args):
+    if not os.path.exists(args.output_folder):
+        os.makedirs(args.output_folder)
+    path=args.output_folder + '/' + path
     image=image.squeeze(0)
     image=image.permute(1,2,0)
     # m=mean.to(device)
@@ -68,36 +72,47 @@ def texture_synthesis(model,target_img,args):
         syn_img.data.clamp_(0,1)
         # print(f'Epoch={i+1}')
         if i%100==0:
-            save_image(syn_img,f'{i+1}_{args.output_path}')
+            save_image(syn_img,f'{i+1}_{args.output_path}', args)
 
-    save_image(syn_img,args.output_path)
+    save_image(syn_img,args.output_path, args)
     return syn_img
 
-def mrf_synthesis(model, target_img, args, orientations):
+def mrf_synthesis(model, target_img, args, orientations, style_img=None):
     syn_img=torch.rand(1,3, 224, 224)
     syn_img=syn_img.to(device).requires_grad_()
     model=model.to(device)
     target_img=target_img.to(device)
+    style_features = None
+    content_features = None
 
     model(target_img)
     target_features=model.features_maps
+    if style_img is not None:
+        style_img=style_img.to(device)
+        model(style_img)
+        style_features=model.features_maps
+        content_features=target_features
 
     loss_forward = Loss_forward(
         h=args.h, 
         patch_size=args.patch_size, 
-        # progression_weight=args.lambda_progression, 
         orientation_weight=args.lambda_orientation,
         occurrence_weight=args.lambda_occurrence,
+        # colorstyle_weight=args.lambda_colorstyle,
         ).to(device)
-    def get_loss(target_features, refer_features, progressions, orientations, layers=[]):
+    def get_loss(target_features, refer_features, orientations, layers=[]):
         loss = 0
         for layer in layers:
             loss += loss_forward(
-                target_features[layer], refer_features[layer],
-                progressions, orientations,
+                target_features[layer], 
+                refer_features[layer],
+                None,
+                orientations,
             )
         return loss
     optimizer = torch.optim.Adam([syn_img],lr=0.01)
+    color_style_transfer = ColorStyleTransfer()
+                
     for i in tqdm(range(args.epochs)):
         optimizer.zero_grad()
         syn_img.data.clamp_(0,1)
@@ -105,18 +120,22 @@ def mrf_synthesis(model, target_img, args, orientations):
         syn_features=model.features_maps
         loss = get_loss(
             syn_features, target_features,
-            None,
             orientations,
             layers=args.layer_list
         )
 
         loss.backward(retain_graph=True)
+        
+        if args.lambda_colorstyle:
+            style_loss = color_style_transfer(syn_features, [style_features, content_features])
+            style_loss.backward(retain_graph=True)
+            
         optimizer.step()
 
         if i%100==0:
-            save_image(syn_img,f'{i+1}_{args.output_path}')
+            save_image(syn_img,f'{i+1}_{args.output_path}', args)
 
-    save_image(syn_img,args.output_path)
+    save_image(syn_img,args.output_path, args)
     return syn_img
 
 
@@ -135,18 +154,26 @@ if __name__ == '__main__':
     parser.add_argument('--method', type=str, default='gram', help='The method for texture synthesis')
     parser.add_argument('--h', type=float, default=0.5, help='h lambdas')
     parser.add_argument('--patch_size', type=int, default=7, help='patch size')
-    parser.add_argument('--lambda_progression', type=float, default=0, help='progression lambdas')
     parser.add_argument('--lambda_orientation', type=float, default=0, help='orientation lambdas')
     parser.add_argument('--lambda_occurrence', type=float, default=0.05, help='occurrence lambdas')
+    parser.add_argument('--lambda_colorstyle', type=float, default=0, help='colorstyle lambdas')
+    parser.add_argument('--style_image', type=str, default='images/pebbles.jpg', help='Path to the style image')
     parser.add_argument('--target_orientation_file', type=str, default='', help='target orientation')
+    parser.add_argument('--output_folder', default='./outputs', type=str, help='output folder')
     args = parser.parse_args()
 
     model=get_vgg19(args.pooling)
     target_img=load_image(args.image_path)
     if args.rescale:
         model=rescale_weights(model,[target_img])
+    style_img=None
+    if args.lambda_colorstyle:
+        style_img=load_image(args.style_image)
 
     with torch.no_grad():
+        # color style transfer
+
+
         # Reference orientation
         refer_orientation = None
         if args.lambda_orientation > 0:
@@ -158,12 +185,12 @@ if __name__ == '__main__':
             # target  --------------------
             target_orientation = np.load(args.target_orientation_file)
             target_orientation = torch.from_numpy(target_orientation).type(torch.float32).to(device)[None]
-            target_orientation = F.interpolate(target_orientation, size=[224,224], mode='bilinear', align_corners=True)
+            target_orientation = F.interpolate(target_orientation, size=[224,224], mode='bilinear')
             target_orientation = target_orientation / target_orientation.norm(dim=1, keepdim=True)
     orientations = [target_orientation, refer_orientation]
 
     if args.method == 'gram':
         texture_synthesis(model,target_img,args)
     elif args.method == 'cnnmrf':
-        mrf_synthesis(model, target_img, args, orientations)
+        mrf_synthesis(model, target_img, args, orientations, style_img)
 

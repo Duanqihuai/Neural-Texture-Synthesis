@@ -8,18 +8,18 @@ import PIL.Image as Image
 import cv2
 
 
-def gradient_x(img):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
-    img_ = cv2.GaussianBlur(img, (5,5), 1)
-    grad_x = cv2.Sobel(img_,cv2.CV_64F,1,0)
+# def gradient_x(img):
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+#     img_ = cv2.GaussianBlur(img, (5,5), 1)
+#     grad_x = cv2.Sobel(img_,cv2.CV_64F,1,0)
 
-    return grad_x
+#     return grad_x
 
-def gradient_y(img):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
-    img_ =cv2.GaussianBlur(img, (5,5), 1)
-    grad_y = cv2.Sobel(img_,cv2.CV_64F,0,1)
-    return grad_y
+# def gradient_y(img):
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+#     img_ =cv2.GaussianBlur(img, (5,5), 1)
+#     grad_y = cv2.Sobel(img_,cv2.CV_64F,0,1)
+#     return grad_y
 
 class DirectionFeatureExtractor(nn.Module):
     def __init__(self, num_bins=9, cell_size=16, min_angle=0, max_angle=180, eps=1e-9):
@@ -110,7 +110,7 @@ class DirectionFeatureExtractor(nn.Module):
 
         return torch.cat(output_orientations, 0)
 
-    def forward(self, input, return_hog=False):
+    def forward(self, input):
         input_size = input.shape[-2:]
 
         # Preprocess
@@ -122,9 +122,5 @@ class DirectionFeatureExtractor(nn.Module):
         orientation = self.extract_dominant_direction(hog)
         orientation = self.resize_orientation(orientation, input_size)
 
-        return_list = [orientation]
-        if return_hog:
-            return_list.append(hog)
-
-        return return_list
+        return [orientation]
 

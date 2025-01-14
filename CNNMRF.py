@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from style import ColorStyleTransfer
 
 
 def feature_normalize(feature):
@@ -119,7 +120,7 @@ def extract_image_patches(image, patch_size, stride):
     return patches
 
 class Loss_forward(torch.nn.Module):
-    def __init__(self, sample_size=100, h=0.5, patch_size=7, orientation_weight=0, occurrence_weight=0):
+    def __init__(self, sample_size=100, h=0.5, patch_size=7, orientation_weight=0, occurrence_weight=0, colorstyle_weight=0):
         super(Loss_forward, self).__init__()
         self.sample_size = sample_size
         self.patch_size = patch_size
@@ -127,6 +128,7 @@ class Loss_forward(torch.nn.Module):
         self.h = h
         self.orientation_weight = orientation_weight
         self.occurrence_weight = occurrence_weight
+        self.colorstyle_weight = colorstyle_weight
 
     def extract_features(self, feature, sample_field=None):
         if self.patch_size > 1:
@@ -138,18 +140,25 @@ class Loss_forward(torch.nn.Module):
             feature = F.grid_sample(feature, sample_field, mode='nearest')
         return feature, sample_field
 
-    def cal_distance(self, target_feature, refer_feature, progression=None, orientation=None):
+    def cal_distance(self, target_feature, refer_feature, style_content_feature=None, orientation=None):
         origin_target_size = target_feature.shape[-2:]
         origin_refer_size = refer_feature.shape[-2:]
+        origin_target_feature = target_feature
 
         # feature
         target_feature, target_field = self.extract_features(target_feature)
         refer_feature, refer_field = self.extract_features(refer_feature)
         d_total = cosine_distance(target_feature, refer_feature)
 
+        # colorstyle transfer
+        if self.colorstyle_weight > 0 and not (style_content_feature==None):
+            with torch.no_grad():
+                color_style_transfer = ColorStyleTransfer()
+                style_loss = color_style_transfer(origin_target_feature, style_content_feature)
+                d_total += style_loss * self.colorstyle_weight
+
         # orientation
-        use_orientation = self.orientation_weight > 0 and not (orientation==None)
-        if use_orientation:
+        if self.orientation_weight > 0 and not (orientation==None):
             with torch.no_grad():
                 target_orient, refer_orient = orientation
                 target_orient = F.interpolate(target_orient, origin_target_size)
@@ -157,28 +166,22 @@ class Loss_forward(torch.nn.Module):
 
                 target_orient = self.extract_features(target_orient, target_field)[0]
                 refer_orient = self.extract_features(refer_orient, refer_field)[0]
-                target_orient = target_orient.view(target_orient.shape[0], 2, self.patch_size ** 2, target_orient.shape[-2], target_orient.shape[-1])
-                refer_orient = refer_orient.view(refer_orient.shape[0], 2, self.patch_size ** 2, refer_orient.shape[-2], refer_orient.shape[-1])
 
-                d_orient = 0
-                for i in range(self.patch_size ** 2):
-                    d_orient += torch.min(
-                        L2_distance(target_orient[:, :, i], refer_orient[:, :, i]),
-                        L2_distance(target_orient[:, :, i], -refer_orient[:, :, i])
-                    )
-                d_orient /= self.patch_size ** 2
+                d_orient = orient_distance(target_orient, refer_orient, self.patch_size)
+                
             d_total += d_orient * self.orientation_weight
-        # occurrence penalty
-        min_idx_for_target = torch.min(d_total, dim=-1, keepdim=True)[1]
-        use_occurrence = self.occurrence_weight > 0
-        if use_occurrence:
+
+        # Occurrence penalty
+        if self.occurrence_weight > 0:
             with torch.no_grad():
-                omega = d_total.shape[1] / d_total.shape[2]
-                occur = torch.zeros_like(d_total[:, 0, :])
-                indexs, counts = min_idx_for_target[0, :, 0].unique(return_counts=True)
-                occur[:, indexs] = counts / omega
-                occur = occur.view(1, 1, -1)
-                d_total += occur * self.occurrence_weight
+                min_indices = torch.argmin(d_total, dim=-1, keepdim=True)
+                normalization_factor = d_total.size(1) / d_total.size(2)
+                penalty = torch.zeros(d_total.size(0), d_total.size(2), device=d_total.device)
+                unique_indices, occurrence_counts = min_indices[0, :, 0].unique(return_counts=True)
+                penalty[:, unique_indices] = occurrence_counts.float() / normalization_factor
+                penalty = penalty.view(1, 1, -1)
+                
+                d_total += penalty * self.occurrence_weight
 
         return d_total
     def cal_loss(self, distance_matrix):
@@ -209,21 +212,20 @@ class Loss_forward(torch.nn.Module):
 
         return loss
 
-    def forward(self, target_features, reference_features, progression=None, orientation=None):
+    def forward(self, target_features, reference_features, style_content_feature=None, orientation=None):
         """
         前向传播。
 
         参数:
             target_features (torch.Tensor): 目标特征图，形状为 [N, C, H, W]。
             reference_features (torch.Tensor): 参考特征图，形状为 [N, C, H, W]。
-            progressions (tuple, optional): 目标进程图和参考进程图。
             orientations (tuple, optional): 目标方向图和参考方向图。
 
         返回:
             loss (torch.Tensor): 计算得到的损失值。
         """
         # 计算距离矩阵
-        distance_matrix = self.cal_distance(target_features, reference_features, progression, orientation)
+        distance_matrix = self.cal_distance(target_features, reference_features, style_content_feature, orientation)
 
         # 计算损失
         loss = self.cal_loss(distance_matrix)
