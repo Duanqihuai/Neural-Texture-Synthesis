@@ -31,10 +31,10 @@ def load_image(image_path):
     # print(image.shape)
     return image
 
-def save_image(image, path, args):
+def save_image(image, filename, args):
     if not os.path.exists(args.output_folder):
         os.makedirs(args.output_folder)
-    path=args.output_folder + '/' + path
+    path=args.output_folder + '/' + filename
     image=image.squeeze(0)
     image=image.permute(1,2,0)
     # m=mean.to(device)
@@ -43,6 +43,8 @@ def save_image(image, path, args):
     # image=image.clamp(0,1)
     image=image.detach().cpu()
     image=image.numpy()
+    image=np.nan_to_num(image, nan=0.0, posinf=1.0, neginf=0.0)
+    image=np.clip(image,0.0,1.0)
     image=(image*255).astype(np.uint8)
     image=cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
     cv2.imwrite(path,image)
@@ -72,7 +74,7 @@ def texture_synthesis(model,target_img,args):
         syn_img.data.clamp_(0,1)
         # print(f'Epoch={i+1}')
         if i%100==0:
-            save_image(syn_img,f'{i+1}_{args.output_path}', args)
+            save_image(syn_img,f'{i+1}_{args.output_filename}', args)
 
     save_image(syn_img,args.output_path, args)
     return syn_img
@@ -148,9 +150,9 @@ if __name__ == '__main__':
     parser.add_argument('--rescale', type=bool, default=True,help='Rescale the weights or not')
     parser.add_argument('--lr', type=float, default=0.1,help='Learning rate')
     parser.add_argument('--image_path', type=str, default='images/pebbles.jpg',help='Path to the source image')
-    parser.add_argument('--output_path', type=str, default='output.jpg',help='Path to save the synthesized image')
+    parser.add_argument('--output_filename', type=str, default='output.jpg',help='File to save the synthesized image')
     parser.add_argument('--epochs', type=int, default=1000,help='Number of epochs')
-    parser.add_argument('--layer_list', type=list, default=['conv1_1','conv2_1','conv3_1','conv4_1'],help='List of layers to use')
+    parser.add_argument('--layer_list',nargs='+', default=['conv1_1','conv2_1','conv3_1','conv4_1'],help='List of layers to use')
     parser.add_argument('--method', type=str, default='gram', help='The method for texture synthesis')
     parser.add_argument('--h', type=float, default=0.5, help='h lambdas')
     parser.add_argument('--patch_size', type=int, default=7, help='patch size')
