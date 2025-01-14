@@ -1,4 +1,4 @@
-#Neural-Texture-Synthesis
+# Neural-Texture-Synthesis
 ## Parameters
 
 - `--model`: (str, default: `'vgg19'`)  
