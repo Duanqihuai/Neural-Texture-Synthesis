@@ -76,7 +76,7 @@ def texture_synthesis(model,target_img,args):
         if i%100==0:
             save_image(syn_img,f'{i+1}_{args.output_filename}', args)
 
-    save_image(syn_img,args.output_path, args)
+    save_image(syn_img,args.output_filename, args)
     return syn_img
 
 def mrf_synthesis(model, target_img, args, orientations, style_img=None):
@@ -135,9 +135,9 @@ def mrf_synthesis(model, target_img, args, orientations, style_img=None):
         optimizer.step()
 
         if i%100==0:
-            save_image(syn_img,f'{i+1}_{args.output_path}', args)
+            save_image(syn_img,f'{i+1}_{args.output_filename}', args)
 
-    save_image(syn_img,args.output_path, args)
+    save_image(syn_img,args.output_filename, args)
     return syn_img
 
 
