@@ -20,7 +20,7 @@ Texture plays an important role in computer vision, graphics, and image encoding
 | `--lambda_orientation`    | `0`                               | `float`  | A weight (`lambda`) for orientation-related loss.                           |
 | `--lambda_occurrence`     | `0.05`                            | `float`  | A weight (`lambda`) for occurrence-related loss.                            |
 | `--lambda_colorstyle`     | `0`                               | `float`  | A weight (`lambda`) for color style-related loss.                           |
-| `--style_image`           | `images/pebbles.jpg`              | `str`    | The path to the style image used for texture synthesis.                     |
+| `--style_image`           | `images/picasso.jpg`              | `str`    | The path to the style image used for texture synthesis.                     |
 | `--target_orientation_file` | `''`                             | `str`    | The path to a file containing target orientation information (if applicable).|
 | `--output_folder`         | `./outputs`                       | `str`    | The folder where the output files will be saved.                            |
 ## Usage
