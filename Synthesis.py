@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--lambda_orientation', type=float, default=0, help='orientation lambdas')
     parser.add_argument('--lambda_occurrence', type=float, default=0.05, help='occurrence lambdas')
     parser.add_argument('--lambda_colorstyle', type=float, default=0, help='colorstyle lambdas')
-    parser.add_argument('--style_image', type=str, default='images/pebbles.jpg', help='Path to the style image')
+    parser.add_argument('--style_image', type=str, default='images/picasso.jpg', help='Path to the style image')
     parser.add_argument('--target_orientation_file', type=str, default='', help='target orientation')
     parser.add_argument('--output_folder', default='./outputs', type=str, help='output folder')
     args = parser.parse_args()
@@ -173,9 +173,6 @@ if __name__ == '__main__':
         style_img=load_image(args.style_image)
 
     with torch.no_grad():
-        # color style transfer
-
-
         # Reference orientation
         refer_orientation = None
         if args.lambda_orientation > 0:
@@ -183,13 +180,14 @@ if __name__ == '__main__':
             refer_orientation = hogExtractor(target_img.to(device))[0]
         # Target orientation
         target_orientation = None
+        orientations = None
         if args.lambda_orientation > 0:
             # target  --------------------
             target_orientation = np.load(args.target_orientation_file)
             target_orientation = torch.from_numpy(target_orientation).type(torch.float32).to(device)[None]
             target_orientation = F.interpolate(target_orientation, size=[224,224], mode='bilinear')
             target_orientation = target_orientation / target_orientation.norm(dim=1, keepdim=True)
-    orientations = [target_orientation, refer_orientation]
+        orientations = [target_orientation, refer_orientation]
 
     if args.method == 'gram':
         texture_synthesis(model,target_img,args)
