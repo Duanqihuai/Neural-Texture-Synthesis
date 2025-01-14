@@ -2,6 +2,9 @@
 ## Abstract
 Texture plays an important role in computer vision, graphics, and image encoding. Texture analysis and synthesis is a popular topic in the field of computer vision. In our project, we implement a simple neural feature synthesis model, load the pre-trained weights, try to generate kaleidoscopic features, and further improve our methods with advanced mathematical tools. Specifically, we used the pre-trained VGG-19 model as the core, extracting features from selected layers and computing the Gram matrices. Using a white noise image as input, we also passed it through the CNN and computed the loss function on the corresponding layers. The weighted loss from each layer was used as the final loss function, and gradient descent was performed to eventually find a new image that matches the Gram matrices of the original texture. In addition, we also implemented the CNNMRF model, which is also based on VGG-19 but further leverages MRF and EM algorithms. We conducted extensive experiments and comparisons, and explored control methods and styles.
 
+## Results of Gram method
+![demo result](images/gram_results.png)
+
 ## Parameters
 
 | Argument                  | Default Value                     | Type     | Description                                                                 |
